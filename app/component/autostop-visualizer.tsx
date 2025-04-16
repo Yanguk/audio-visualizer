@@ -5,10 +5,15 @@ import { cn } from "@/app/utils/cn";
 import { useEffect, useRef, useState } from "react";
 
 /** 보정치 값으로 클수록 낮은 소리까지 증폭 */
-const NORMALIZE_SENSITIVITY = 3;
+const DEFAULT_SENSITIVITY = 5;
 
 export default function AutoStopVisualizer() {
   const [soundVal, setSoundVal] = useState(0);
+  const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY);
+
+  const sensitivityRef = useRef(sensitivity);
+
+  sensitivityRef.current = sensitivity;
 
   useEffect(() => {
     let frameId: number | null = null;
@@ -26,7 +31,10 @@ export default function AutoStopVisualizer() {
       });
 
       const onframe = () => {
-        const normalizedVolume = normalizeVolume({ analyser });
+        const normalizedVolume = normalizeVolume({
+          analyser,
+          sensitivity: sensitivityRef.current,
+        });
 
         setSoundVal(normalizedVolume);
 
@@ -48,22 +56,53 @@ export default function AutoStopVisualizer() {
           <AudioCircle soundVal={soundVal} />
         </div>
       </div>
+
+      <div className="w-full max-w-md">
+        <div className="mb-2 flex justify-between items-center">
+          <label
+            htmlFor="sensitivity-slider"
+            className="text-sm font-medium text-gray-700"
+          >
+            음성 감도 조절 ({sensitivity.toFixed(1)})
+          </label>
+          <button
+            onClick={() => setSensitivity(DEFAULT_SENSITIVITY)}
+            className="text-xs py-1 px-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+          >
+            기본값으로 초기화
+          </button>
+        </div>
+
+        <input
+          id="sensitivity-slider"
+          type="range"
+          min="1"
+          max="10"
+          step="0.1"
+          value={sensitivity}
+          onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+        />
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>낮음</span>
+          <span>높음</span>
+        </div>
+      </div>
     </div>
   );
 }
 
 function normalizeVolume({
   analyser,
-  sensitivity = NORMALIZE_SENSITIVITY,
+  sensitivity,
 }: {
   analyser: AnalyserNode;
-  sensitivity?: number;
+  sensitivity: number;
 }) {
   // 데이터 배열 설정
   const bufferLength = analyser.frequencyBinCount;
   const dataArray = new Float32Array(bufferLength);
 
-  // 오디오의 볼륨을 0~1 사이의 값으로 정규화
   analyser.getFloatTimeDomainData(dataArray);
 
   const sum = dataArray.reduce((acc, value) => acc + value * value, 0);
@@ -71,8 +110,8 @@ function normalizeVolume({
   // 오디오 데이터 평균값 > 오디오의 대략적인 크기
   const rms = Math.sqrt(sum / bufferLength);
 
-  // 증폭치 조절 (소수점 둘째 자리까지 제한)
-  const normalizedVolume = Number(Math.min(1, rms * sensitivity).toFixed(2));
+  // 오디오의 볼륨을 0~1 사이의 값으로 정규화
+  const normalizedVolume = Math.min(1, rms * sensitivity);
 
   return normalizedVolume;
 }
@@ -82,7 +121,7 @@ interface AudioCircleProps {
 }
 
 function AudioCircle({ soundVal }: AudioCircleProps) {
-  const throttledValue = useThrottledValue(soundVal, 1000);
+  const throttledValue = useThrottledValue(soundVal, 500);
 
   return (
     <div className="relative flex items-center justify-center overflow-visible">
