@@ -1,5 +1,5 @@
 "use client";
-import { createStreamAnalyser } from "@/app/component/visualizer-util";
+import { createStreamAnalyser, drawCtx } from "@/app/component/visualizer-util";
 import { useEffect, useRef } from "react";
 
 export default function AudioVisualizer() {
