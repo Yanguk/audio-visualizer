@@ -8,7 +8,7 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
-      <h1 className="text-3xl font-bold mb-6">음성 스펙트럼 시각화</h1>
+      <h1 className="text-3xl font-bold mb-6">[덤보] 마이크 사용 테스트</h1>
 
       {/* 탭 선택 UI */}
       <div className="flex w-full max-w-2xl mb-4 border-b border-gray-200">
