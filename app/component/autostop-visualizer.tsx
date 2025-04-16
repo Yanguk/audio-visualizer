@@ -3,17 +3,21 @@ import { createStreamAnalyser } from "@/app/component/visualizer";
 import { useThrottledValue } from "@/app/hooks/useThrottledValue";
 import { cn } from "@/app/utils/cn";
 import { useEffect, useRef, useState } from "react";
+import { useDebounceValue } from "usehooks-ts";
 
 /** 보정치 값으로 클수록 낮은 소리까지 증폭 */
 const DEFAULT_SENSITIVITY = 5;
 
 export default function AutoStopVisualizer() {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
   const [soundVal, setSoundVal] = useState(0);
   const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY);
 
   const sensitivityRef = useRef(sensitivity);
-
   sensitivityRef.current = sensitivity;
+
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let frameId: number | null = null;
@@ -38,6 +42,28 @@ export default function AutoStopVisualizer() {
 
         setSoundVal(normalizedVolume);
 
+        // 0인 상태가 지속될시 3초후 speaking 상태 해제
+        if (normalizedVolume === 0 && isSpeaking) {
+          if (!silenceTimerRef.current) {
+            silenceTimerRef.current = setTimeout(() => {
+              setIsSpeaking(false);
+              silenceTimerRef.current = null;
+            }, 3000); // 3 seconds timeout
+          }
+        }
+
+        // 말하고 있으면 silenceTimer 초기화
+        if (normalizedVolume > 0) {
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+          }
+
+          if (!isSpeaking) {
+            setIsSpeaking(true);
+          }
+        }
+
         frameId = requestAnimationFrame(onframe);
       };
 
@@ -46,8 +72,11 @@ export default function AutoStopVisualizer() {
 
     return () => {
       frameId && cancelAnimationFrame(frameId);
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+      }
     };
-  }, []);
+  }, [isSpeaking]);
 
   return (
     <div className="flex flex-col items-center justify-center size-full">
@@ -76,7 +105,7 @@ export default function AutoStopVisualizer() {
         <input
           id="sensitivity-slider"
           type="range"
-          min="1"
+          min="0.1"
           max="10"
           step="0.1"
           value={sensitivity}
@@ -86,6 +115,19 @@ export default function AutoStopVisualizer() {
         <div className="flex justify-between text-xs text-gray-500 mt-1">
           <span>낮음</span>
           <span>높음</span>
+        </div>
+      </div>
+
+      <div className="mt-8 w-full max-w-md text-center">
+        <h1>3초동안 말이 없으면 종료 로 바뀝니다.</h1>
+
+        <div
+          className={cn(
+            "mt-2 py-2 px-4 font-medium transition-colors duration-300",
+            isSpeaking ? "text-green-700" : " text-red-700",
+          )}
+        >
+          {isSpeaking ? "🎤 말하는중..." : "🛑 종료..."}
         </div>
       </div>
     </div>
@@ -111,7 +153,7 @@ function normalizeVolume({
   const rms = Math.sqrt(sum / bufferLength);
 
   // 오디오의 볼륨을 0~1 사이의 값으로 정규화
-  const normalizedVolume = Math.min(1, rms * sensitivity);
+  const normalizedVolume = Number(Math.min(1, rms * sensitivity).toFixed(2));
 
   return normalizedVolume;
 }

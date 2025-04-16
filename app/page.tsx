@@ -59,10 +59,9 @@ export default function Home() {
         <NormalVisualizer />
       )}
 
-      <div className="mt-8 w-2xl">
+      <div className="mt-16 w-2xl">
         <h2>체크 리스트</h2>
-        <ol>1. 주변 소음에 대한 케이스 (노멀라이징)</ol>
-        <ol>2. 마지막 음성을 기준으로 녹음을 중지 시키기?</ol>
+        <ol>1. 어떠한 기준을 잡고 싶은건지?</ol>
       </div>
     </div>
   );
