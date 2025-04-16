@@ -167,7 +167,7 @@ function normalizeVolume({
 
   const sum = dataArray.reduce((acc, value) => acc + value * value, 0);
 
-  // 오디오 데이터 평균값 > 오디오의 대략적인 크기
+  // 오디오 데이터 평균값 => 오디오의 대략적인 크기
   const rms = Math.sqrt(sum / bufferLength);
 
   // 오디오의 볼륨을 0~1 사이의 값으로 정규화
