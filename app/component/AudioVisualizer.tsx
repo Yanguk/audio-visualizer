@@ -1,8 +1,8 @@
 "use client";
-import { createStreamAnalyser, drawCtx } from "@/app/component/visualizer";
-import { useEffect, useRef, useState } from "react";
+import { createStreamAnalyser } from "@/app/component/visualizer-util";
+import { useEffect, useRef } from "react";
 
-export default function NormalVisualizer() {
+export default function AudioVisualizer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // 오디오 시각화 설정

@@ -1,7 +1,7 @@
 "use client";
 
-import AutoStopVisualizer from "@/app/component/autostop-visualizer";
-import NormalVisualizer from "@/app/component/normal-visualizer";
+import AudioVisualizer from "@/app/component/AudioVisualizer";
+import NormalizingVisualizer from "@/app/component/NormalizingVisualizer";
 import { useEffect, useState } from "react";
 
 export default function Home() {
@@ -54,9 +54,9 @@ export default function Home() {
       {!isAudioPermissionGranted ? (
         <div>마이크 권한이 필요해요</div>
       ) : activeTabIdx === 0 ? (
-        <AutoStopVisualizer />
+        <NormalizingVisualizer />
       ) : (
-        <NormalVisualizer />
+        <AudioVisualizer />
       )}
 
       <div className="mt-16 w-2xl">

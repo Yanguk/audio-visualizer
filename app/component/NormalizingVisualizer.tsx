@@ -1,14 +1,13 @@
 "use client";
-import { createStreamAnalyser } from "@/app/component/visualizer";
+import { createStreamAnalyser } from "@/app/component/visualizer-util";
 import { useThrottledValue } from "@/app/hooks/useThrottledValue";
 import { cn } from "@/app/utils/cn";
 import { useEffect, useRef, useState } from "react";
-import { useDebounceValue } from "usehooks-ts";
 
 /** 보정치 값으로 클수록 낮은 소리까지 증폭 */
 const DEFAULT_SENSITIVITY = 5;
 
-export default function AutoStopVisualizer() {
+export default function NormalizingVisualizer() {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const [soundVal, setSoundVal] = useState(0);
