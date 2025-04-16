@@ -12,12 +12,14 @@ export default function NormalizingVisualizer() {
 
   const [soundVal, setSoundVal] = useState(0);
   const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY);
+  const [debounceSec, setDebounceSec] = useState(3);
 
   const sensitivityRef = useRef(sensitivity);
   sensitivityRef.current = sensitivity;
 
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 오디오 분석 및 소리 값 설정을 위한 effect
   useEffect(() => {
     let frameId: number | null = null;
 
@@ -41,28 +43,6 @@ export default function NormalizingVisualizer() {
 
         setSoundVal(normalizedVolume);
 
-        // 0인 상태가 지속될시 3초후 speaking 상태 해제
-        if (normalizedVolume === 0 && isSpeaking) {
-          if (!silenceTimerRef.current) {
-            silenceTimerRef.current = setTimeout(() => {
-              setIsSpeaking(false);
-              silenceTimerRef.current = null;
-            }, 3000); // 3 seconds timeout
-          }
-        }
-
-        // 말하고 있으면 silenceTimer 초기화
-        if (normalizedVolume > 0) {
-          if (silenceTimerRef.current) {
-            clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = null;
-          }
-
-          if (!isSpeaking) {
-            setIsSpeaking(true);
-          }
-        }
-
         frameId = requestAnimationFrame(onframe);
       };
 
@@ -71,11 +51,39 @@ export default function NormalizingVisualizer() {
 
     return () => {
       frameId && cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  // 말하기 상태 관리를 위한 effect
+  useEffect(() => {
+    // 소리 값이 0이고 현재 말하고 있는 상태일 때
+    if (soundVal === 0 && isSpeaking) {
+      if (!silenceTimerRef.current) {
+        silenceTimerRef.current = setTimeout(() => {
+          setIsSpeaking(false);
+          silenceTimerRef.current = null;
+        }, debounceSec * 1000);
+      }
+    }
+
+    // 소리가 감지되면 타이머 초기화 및 말하기 상태 설정
+    if (soundVal > 0) {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
+
+      if (!isSpeaking) {
+        setIsSpeaking(true);
+      }
+    }
+
+    return () => {
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
       }
     };
-  }, [isSpeaking]);
+  }, [soundVal, isSpeaking, debounceSec]);
 
   return (
     <div className="flex flex-col items-center justify-center size-full">
@@ -118,7 +126,18 @@ export default function NormalizingVisualizer() {
       </div>
 
       <div className="mt-8 w-full max-w-md text-center">
-        <h1>3초동안 말이 없으면 종료 로 바뀝니다.</h1>
+        <h1 className="flex items-center justify-center gap-1 text-base font-medium text-gray-700">
+          <input
+            value={debounceSec}
+            onChange={(e) => setDebounceSec(Number(e.target.value))}
+            className="w-14 text-center border border-gray-300 rounded p-1 mx-1 inline-block"
+            type="number"
+            min="0.1"
+            max="10"
+            step="0.1"
+          />
+          초동안 말이 없으면 종료로 바뀝니다.
+        </h1>
 
         <div
           className={cn(
