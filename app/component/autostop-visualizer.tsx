@@ -1,88 +1,60 @@
 "use client";
-import { createStreamAnalyser, drawCtx } from "@/app/component/visualizer";
+import { createStreamAnalyser } from "@/app/component/visualizer";
+import { useThrottledValue } from "@/app/hooks/useThrottledValue";
+import { cn } from "@/app/utils/cn";
 import { useEffect, useRef, useState } from "react";
 
+/** 보정치 값으로 클수록 낮은 소리까지 증폭 */
+const NORMALIZE_SENSITIVITY = 3;
+
 export default function AutoStopVisualizer() {
-  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
+  const [soundVal, setSoundVal] = useState(0);
 
-  const isRecording = !!analyser;
+  useEffect(() => {
+    let frameId: number | null = null;
 
-  // 오디오 시각화 설정
-  const startRecording = async () => {
-    // 마이크 접근 권한 요청
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
+    (async () => {
+      const audioContext = new AudioContext();
 
-    const audioContext = new AudioContext();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
 
-    const analyser = createStreamAnalyser({
-      stream,
-      audioContext,
-    });
+      const analyser = createStreamAnalyser({
+        stream,
+        audioContext,
+      });
 
-    setAnalyser(analyser);
-  };
+      const onframe = () => {
+        const normalizedVolume = normalizeVolume({ analyser });
 
-  const stopRecording = () => {
-    setAnalyser(null);
-  };
+        setSoundVal(normalizedVolume);
+
+        frameId = requestAnimationFrame(onframe);
+      };
+
+      onframe();
+    })();
+
+    return () => {
+      frameId && cancelAnimationFrame(frameId);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center size-full">
       <div className="w-full max-w-2xl mb-6 h-[300px] flex items-center justify-center">
-        {analyser ? <Indicator analyser={analyser} /> : "중지"}
-      </div>
-
-      <div className="flex gap-4 h-32 flex-col items-center">
-        <h3>3 초후에 마지막 음성 기준 으로 3초뒤 중지</h3>
-
-        <button
-          onClick={isRecording ? stopRecording : startRecording}
-          className={`px-6 py-3 rounded-md font-medium ${
-            isRecording
-              ? "bg-red-500 hover:bg-red-600"
-              : "bg-blue-500 hover:bg-blue-600"
-          } text-white transition-colors h-12`}
-        >
-          {isRecording ? "중지" : "시작"}
-        </button>
+        <div className="flex flex-col items-center justify-center">
+          <AudioCircle soundVal={soundVal} />
+        </div>
       </div>
     </div>
   );
 }
 
-function Indicator({ analyser }: { analyser: AnalyserNode }) {
-  const [soundVal, setSoundVal] = useState(0);
-  const frameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    const onframe = () => {
-      const normalizedVolume = normalizeVolume({ analyser });
-
-      setSoundVal(normalizedVolume);
-
-      frameRef.current = requestAnimationFrame(onframe);
-    };
-
-    onframe();
-
-    return () => {
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current);
-      }
-    };
-  }, [analyser]);
-
-  // 원형 오디오 시각화 그리기
-
-  return <div>{soundVal}</div>;
-}
-
 function normalizeVolume({
   analyser,
-  /** 보정치 값으로 클수록 낮은 소리까지 증폭 */
-  sensitivity = 2,
+  sensitivity = NORMALIZE_SENSITIVITY,
 }: {
   analyser: AnalyserNode;
   sensitivity?: number;
@@ -103,4 +75,46 @@ function normalizeVolume({
   const normalizedVolume = Number(Math.min(1, rms * sensitivity).toFixed(2));
 
   return normalizedVolume;
+}
+
+interface AudioCircleProps {
+  soundVal: number;
+}
+
+function AudioCircle({ soundVal }: AudioCircleProps) {
+  const throttledValue = useThrottledValue(soundVal, 1000);
+
+  return (
+    <div className="relative flex items-center justify-center overflow-visible">
+      <div
+        className={cn(
+          "absolute rounded-full transition-all duration-300 border-2",
+          soundVal > 0 ? "border-blue-500 border-3" : "border-gray-300",
+        )}
+        style={{
+          width: `${100 + soundVal * 150}px`,
+          height: `${100 + soundVal * 150}px`,
+          opacity: soundVal > 0 ? 0.8 : 0.3,
+          transform: `scale(${1 + soundVal * 1.6})`,
+        }}
+      />
+
+      <div
+        className={cn(
+          "absolute rounded-full transition-all duration-150 border-2",
+          soundVal > 0 ? "border-purple-500 border-3" : "border-gray-300",
+        )}
+        style={{
+          width: `${60 + soundVal * 120}px`,
+          height: `${60 + soundVal * 120}px`,
+          opacity: soundVal > 0 ? 0.7 : 0.3,
+          transform: `scale(${1 + soundVal * 1.2})`,
+        }}
+      />
+
+      <div className="text-lg font-bold text-gray-800">
+        {(throttledValue * 100).toFixed(0)}
+      </div>
+    </div>
+  );
 }

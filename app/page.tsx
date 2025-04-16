@@ -1,10 +1,27 @@
 "use client";
+
 import AutoStopVisualizer from "@/app/component/autostop-visualizer";
 import NormalVisualizer from "@/app/component/normal-visualizer";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const [activeTabIdx, setActiveTab] = useState(0);
+  const [isAudioPermissionGranted, setIsAudioPermissionGranted] =
+    useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({
+          audio: true,
+        });
+
+        setIsAudioPermissionGranted(true);
+      } catch (e) {
+        console.error("Error accessing microphone:", e);
+      }
+    })();
+  }, []);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
@@ -20,7 +37,7 @@ export default function Home() {
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          일반적인 시각화
+          일정 소음 이상부터 인지하게 노멀라이징
         </button>
         <button
           onClick={() => setActiveTab(1)}
@@ -30,11 +47,17 @@ export default function Home() {
               : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          마지막 음성 기준으로 딜레이 주면서 자동정지
+          모든소음 인지
         </button>
       </div>
 
-      {activeTabIdx === 0 ? <NormalVisualizer /> : <AutoStopVisualizer />}
+      {!isAudioPermissionGranted ? (
+        <div>마이크 권한이 필요해요</div>
+      ) : activeTabIdx === 0 ? (
+        <AutoStopVisualizer />
+      ) : (
+        <NormalVisualizer />
+      )}
 
       <div className="mt-8 w-2xl">
         <h2>체크 리스트</h2>
