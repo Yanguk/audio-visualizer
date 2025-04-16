@@ -187,27 +187,24 @@ function AudioCircle({ soundVal }: AudioCircleProps) {
     <div className="relative flex items-center justify-center overflow-visible">
       <div
         className={cn(
-          "absolute rounded-full transition-all duration-300 border-2",
+          "absolute rounded-full transition-all duration-300 border-2 size-[150px]",
           soundVal > 0 ? "border-blue-500 border-3" : "border-gray-300",
         )}
         style={{
-          width: `${100 + soundVal * 150}px`,
-          height: `${100 + soundVal * 150}px`,
           opacity: soundVal > 0 ? 0.8 : 0.3,
-          transform: `scale(${1 + soundVal * 1.6})`,
+          transform: `translate3d(0,0,0) scale3d(${1 + soundVal * 2}, ${1 + soundVal * 2}, 1)`,
+          WebkitTransform: `translate3d(0,0,0) scale3d(${1 + soundVal * 2}, ${1 + soundVal * 2}, 1)`,
         }}
       />
-
       <div
         className={cn(
-          "absolute rounded-full transition-all duration-150 border-2",
+          "absolute rounded-full transition-all duration-150 border-2 size-[100px]",
           soundVal > 0 ? "border-purple-500 border-3" : "border-gray-300",
         )}
         style={{
-          width: `${60 + soundVal * 120}px`,
-          height: `${60 + soundVal * 120}px`,
           opacity: soundVal > 0 ? 0.7 : 0.3,
-          transform: `scale(${1 + soundVal * 1.2})`,
+          transform: `translate3d(0,0,0) scale3d(${1 + soundVal * 1.6}, ${1 + soundVal * 1.6}, 1)`,
+          WebkitTransform: `translate3d(0,0,0) scale3d(${1 + soundVal * 1.6}, ${1 + soundVal * 1.6}, 1)`,
         }}
       />
 
