@@ -1,103 +1,156 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const animationFrameIdRef = useRef<number | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+  // 오디오 시각화 설정
+  const startRecording = async () => {
+    try {
+      // 이전 애니메이션 프레임 취소
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+
+      // 오디오 컨텍스트 초기화
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext ||
+          (window as any).webkitAudioContext)();
+      }
+
+      // 마이크 접근 권한 요청
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
+
+      // 오디오 분석기 설정
+      const audioContext = audioContextRef.current;
+      const analyser = audioContext.createAnalyser();
+      analyserRef.current = analyser;
+      analyser.fftSize = 256;
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      setIsRecording(true);
+
+      // 애니메이션 시작
+      draw();
+    } catch (error) {
+      console.error("마이크 접근 에러:", error);
+    }
+  };
+
+  const stopRecording = () => {
+    // 스트림 중지
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+    }
+
+    // 애니메이션 중지
+    if (animationFrameIdRef.current) {
+      cancelAnimationFrame(animationFrameIdRef.current);
+      animationFrameIdRef.current = null;
+    }
+
+    setIsRecording(false);
+  };
+
+  // 캔버스에 시각화 그리기
+  const draw = () => {
+    const canvas = canvasRef.current;
+    const analyser = analyserRef.current;
+
+    if (!canvas || !analyser) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // 캔버스 크기 설정
+    const width = canvas.width;
+    const height = canvas.height;
+
+    // 데이터 배열 설정
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    // 오디오 데이터 가져오기
+    analyser.getByteFrequencyData(dataArray);
+
+    // 캔버스 지우기
+    ctx.clearRect(0, 0, width, height);
+
+    // 바 형태로 그리기
+    const drawBars = () => {
+      const barCount = bufferLength / 2; // 표시할 바의 개수 (모든 주파수 데이터 사용)
+      const barWidth = width / barCount; // 각 바의 너비
+      const barMargin = 2; // 바 사이의 간격
+
+      // 바 그리기
+      for (let i = 0; i < barCount; i++) {
+        // 데이터 값에 따라 바의 높이 계산 (0-255 범위의 값을 캔버스 높이에 맞게 조정)
+        const value = dataArray[i];
+        const barHeight = (value / 255) * height;
+
+        // 주파수에 따른 색상 계산 (낮은 주파수는 파란색, 높은 주파수는 빨간색)
+        const hue = (i / barCount) * 200; // 파란색(240)에서 빨간색(0)으로 변경
+
+        // 바 그리기
+        ctx.fillStyle = `hsl(${240 - hue}, 100%, 50%)`;
+        ctx.fillRect(
+          i * barWidth + barMargin / 2,
+          height - barHeight,
+          barWidth - barMargin,
+          barHeight,
+        );
+      }
+    };
+
+    drawBars();
+
+    // 애니메이션 반복
+    animationFrameIdRef.current = requestAnimationFrame(draw);
+  };
+
+  // 컴포넌트 정리
+  useEffect(() => {
+    return () => {
+      if (animationFrameIdRef.current) {
+        cancelAnimationFrame(animationFrameIdRef.current);
+      }
+
+      if (mediaStreamRef.current) {
+        mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
+      <h1 className="text-3xl font-bold mb-6">음성 스펙트럼 시각화</h1>
+      <div className="w-full max-w-2xl mb-6">
+        <canvas
+          ref={canvasRef}
+          width={800}
+          height={300}
+          className="w-full h-auto bg-white rounded-md shadow-md"
+        ></canvas>
+      </div>
+      <div className="flex gap-4">
+        <button
+          onClick={isRecording ? stopRecording : startRecording}
+          className={`px-6 py-3 rounded-md font-medium ${
+            isRecording
+              ? "bg-red-500 hover:bg-red-600"
+              : "bg-blue-500 hover:bg-blue-600"
+          } text-white transition-colors`}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          {isRecording ? "녹음 중지" : "마이크 활성화"}
+        </button>
+      </div>
     </div>
   );
 }
