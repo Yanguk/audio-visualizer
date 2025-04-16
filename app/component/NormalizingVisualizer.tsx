@@ -4,15 +4,25 @@ import { useThrottledValue } from "@/app/hooks/useThrottledValue";
 import { cn } from "@/app/utils/cn";
 import { useEffect, useRef, useState } from "react";
 
-/** 보정치 값으로 클수록 낮은 소리까지 증폭 */
+/**
+ * 보정치 값으로 클수록 낮은 소리까지 증폭
+ * 0-10 사이의 표시값으로, 내부적으로는 log10 스케일로 변환됨
+ */
 const DEFAULT_SENSITIVITY = 5;
 
 export default function NormalizingVisualizer() {
   const [isSpeaking, setIsSpeaking] = useState(false);
 
   const [soundVal, setSoundVal] = useState(0);
-  const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY);
+  const [sensitivityDisplay, setSensitivityDisplay] =
+    useState(DEFAULT_SENSITIVITY);
+
   const [debounceSec, setDebounceSec] = useState(3);
+
+  // Convert display value (0-10) to actual sensitivity using log10 scale
+  const sensitivity = sensitivityDisplay
+    ? Math.pow(10, sensitivityDisplay / 10) / 10
+    : 0;
 
   const sensitivityRef = useRef(sensitivity);
   sensitivityRef.current = sensitivity;
@@ -99,10 +109,11 @@ export default function NormalizingVisualizer() {
             htmlFor="sensitivity-slider"
             className="text-sm font-medium text-gray-700"
           >
-            음성 감도 조절 ({sensitivity.toFixed(1)})
+            음성 감도 조절 ({sensitivityDisplay.toFixed(1)}) [실제값:{" "}
+            {sensitivity.toFixed(2)}]
           </label>
           <button
-            onClick={() => setSensitivity(DEFAULT_SENSITIVITY)}
+            onClick={() => setSensitivityDisplay(DEFAULT_SENSITIVITY)}
             className="text-xs py-1 px-2 bg-gray-200 rounded hover:bg-gray-300 transition-colors"
           >
             기본값으로 초기화
@@ -112,11 +123,11 @@ export default function NormalizingVisualizer() {
         <input
           id="sensitivity-slider"
           type="range"
-          min="0.1"
+          min="0"
           max="10"
           step="0.1"
-          value={sensitivity}
-          onChange={(e) => setSensitivity(parseFloat(e.target.value))}
+          value={sensitivityDisplay}
+          onChange={(e) => setSensitivityDisplay(parseFloat(e.target.value))}
           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
         />
         <div className="flex justify-between text-xs text-gray-500 mt-1">
