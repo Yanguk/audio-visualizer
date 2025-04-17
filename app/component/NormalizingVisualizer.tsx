@@ -116,7 +116,7 @@ export default function NormalizingVisualizer() {
             className="text-sm font-medium text-gray-700"
           >
             음성 감도 조절 ({sensitivityDisplay.toFixed(1)}) [실제값:{" "}
-            {sensitivity}
+            {sensitivity}]
           </label>
           <button
             onClick={() => setSensitivityDisplay(DEFAULT_SENSITIVITY)}
