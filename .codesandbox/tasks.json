@@ -16,15 +16,15 @@
     },
     "build": {
       "name": "build",
-      "command": "npm run build"
+      "command": "pnpm run build"
     },
     "start": {
       "name": "start",
-      "command": "npm run start"
+      "command": "pnpm run start"
     },
     "lint": {
       "name": "lint",
-      "command": "npm run lint"
+      "command": "pnpm run lint"
     }
   }
 }
