@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 /**
  * 보정치 값으로 클수록 낮은 소리까지 증폭
  * 0-10 사이의 표시값으로, 내부적으로는 log10 스케일로 변환됨
+ * 실제 최대값은 3
  */
 const DEFAULT_SENSITIVITY = 5;
 
@@ -20,8 +21,13 @@ export default function NormalizingVisualizer() {
   const [debounceSec, setDebounceSec] = useState(3);
 
   // Convert display value (0-10) to actual sensitivity using log10 scale
+  // When slider is at max (10), the actual sensitivity value will be around 3
   const sensitivity = sensitivityDisplay
-    ? Math.pow(10, sensitivityDisplay / 10) / 10
+    ? Number(
+        (Math.pow(10, (sensitivityDisplay * Math.log10(30)) / 10) / 10).toFixed(
+          2,
+        ),
+      )
     : 0;
 
   const sensitivityRef = useRef(sensitivity);
@@ -110,7 +116,7 @@ export default function NormalizingVisualizer() {
             className="text-sm font-medium text-gray-700"
           >
             음성 감도 조절 ({sensitivityDisplay.toFixed(1)}) [실제값:{" "}
-            {sensitivity.toFixed(2)}]
+            {sensitivity}
           </label>
           <button
             onClick={() => setSensitivityDisplay(DEFAULT_SENSITIVITY)}
